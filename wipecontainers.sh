@@ -1,11 +1,12 @@
 #!/bin/bash
 
-USAGE="${0##*/} [ -p | -d ] [ img | con | all ]"
+USAGE="${0##*/} [ -p | -d ] [ img | con | all ] [ -f ]"
 
 # args required
 [[ -z $@ ]] && echo -en "${USAGE}\n" && exit 1
 
 # wipes docker or podman containers, images, or both (all)
+FORCE=0
 for arg in "$@"; do
     case $arg in
         "-d")
@@ -27,6 +28,10 @@ for arg in "$@"; do
             ;;
         "img")
             CLEANINST=1
+            shift
+            ;;
+        "-f")
+            FORCE=1
             shift
             ;;
         *)
@@ -51,7 +56,12 @@ fi
 
 if [[ $RETVAL -eq 0 ]] && [[ $CLEANINST -eq 1 ]]; then
     echo -en "=== Removing $ENGINE images...\n"
-    for x in $($CONTCMD image ls -a | awk '{ print $3 }' | egrep -vw IMAGE); do $CONTCMD rmi $x; done
+    if [[ $FORCE -eq 1 ]]; then
+        RMI="rmi -f"
+    else
+        RMI="rmi"
+    fi
+    for x in $($CONTCMD image ls -a | awk '{ print $3 }' | egrep -vw IMAGE); do $CONTCMD $RMI $x; done
     RETVAL=$?
 fi
 
